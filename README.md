@@ -86,3 +86,17 @@ php artisan test
    Open two terminals:
    - Term 1: `php artisan schedule:work` (dispatches checks)
    - Term 2: `php artisan queue:work` (processes the checks)
+
+---
+
+## 🚀 Future Improvements & Scaling
+
+If this were to go into a high-scale production environment, here are the next steps I would take:
+
+1. **Multi-Region Monitoring**: Currently, checks run from a single server. A production-grade system should dispatch checks from different geographical regions (AWS US-East, EU-West, etc.) to detect regional routing issues.
+2. **Response Pattern Matching**: Instead of just checking for a `200 OK`, we could add a `required_pattern` field to ensure the page isn't just "up" but is actually serving the correct content (e.g., checking for the string "Login" on a login page).
+3. **Redis Integration**: For better performance, we should move the Queue and Cache to **Redis**. This would allow for much higher throughput and faster status lookups.
+4. **Advanced Notifications**: Use Laravel's Notification system to support Slack, Discord, and SMS (Twilio/Vonage) alerts with per-monitor configuration.
+5. **Observability**: Export response time metrics to **Prometheus** and build a **Grafana** dashboard to visualize latency trends and uptime percentages over time.
+6. **Rate Limiting**: Add per-user or per-IP rate limiting to the API endpoints to prevent abuse and ensure system stability.
+
