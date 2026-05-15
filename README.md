@@ -4,7 +4,7 @@ This is a production-ready uptime monitoring system built with Laravel 13 and PH
 
 ---
 
-## 🏗️ Technical Rationale (Why this approach?)
+## Technical Rationale (Why this approach?)
 
 When building a monitor, you have to plan for scale. Here’s why I chose this specific architecture:
 
@@ -22,7 +22,7 @@ When building a monitor, you have to plan for scale. Here’s why I chose this s
 
 ---
 
-## 🚀 Getting Started
+##  Getting Started
 
 Follow these steps to set up the project locally:
 
@@ -71,7 +71,7 @@ php artisan serve
 
 ---
 
-## 📡 API Reference & Testing
+## API Reference & Testing
 
 All endpoints require the `X-API-KEY` header.
 
@@ -113,7 +113,7 @@ All endpoints require the `X-API-KEY` header.
 
 ---
 
-## 🧪 How to Test
+## How to Test
 
 ### Automated Tests
 I’ve written 15 functional tests covering security, threshold logic, and alerts.
@@ -138,7 +138,7 @@ php artisan test
 
 ---
 
-## 🚀 Future Improvements & Scaling
+## Future Improvements & Scaling
 
 If this were to go into a high-scale production environment, here are the next steps I would take:
 
