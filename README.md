@@ -22,6 +22,55 @@ When building a monitor, you have to plan for scale. Here’s why I chose this s
 
 ---
 
+## 🚀 Getting Started
+
+Follow these steps to set up the project locally:
+
+### 1. Prerequisites
+- **PHP 8.4+**
+- **Composer**
+- **MySQL**
+
+### 2. Installation
+```bash
+# Clone the repository
+git clone <repository-url>
+cd backend_developer_test
+
+# Install dependencies
+composer install
+
+# Set up environment file
+cp .env.example .env
+
+# Generate application key
+php artisan key:generate
+
+# Generate API key for the monitor
+php artisan app:generate-api-key
+```
+
+### 3. Database & Migrations
+This project uses Laravel Migrations. Ensure you have a MySQL database created and configured in your `.env` file.
+```bash
+# Run all migrations
+php artisan migrate
+```
+
+### 4. Database Schema (Migrations)
+For vetting purposes, the database migrations can be found in the [`database/migrations`](./database/migrations) directory. Here is the core structure:
+- **`monitors`**: Stores target URLs, check intervals, failure thresholds, and current status.
+- **`check_histories`**: Logs every uptime check, including response time, status code, and success/failure state.
+- **`failed_jobs` / `jobs`**: Standard Laravel tables for asynchronous processing of monitoring tasks.
+
+### 5. Start the Application
+```bash
+# Start the development server
+php artisan serve
+```
+
+---
+
 ## 📡 API Reference & Testing
 
 All endpoints require the `X-API-KEY` header.
