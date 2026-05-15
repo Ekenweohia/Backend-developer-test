@@ -1,47 +1,88 @@
 # Uptime Monitor API
 
-This is a simple but scalable uptime monitoring system built with Laravel 13 and PHP 8.4. It handles URL registration, periodic status checks via background jobs, and sends email alerts when things go sideways.
+This is a production-ready uptime monitoring system built with Laravel 13 and PHP 8.4.
 
 ---
 
-## How it works (The Architecture)
+## 🏗️ Technical Rationale (Why this approach?)
 
-I went with a queue-based approach because looping through URLs in a single process is a recipe for disaster once you have more than a handful of sites.
+When building a monitor, you have to plan for scale. Here’s why I chose this specific architecture:
 
-- **The Checker**: There's a custom artisan command `monitors:check` that runs every minute via the scheduler. It just looks for what needs checking and throws a job onto the queue.
-- **Background Jobs**: Each check happens in its own `PerformCheckJob`. This keeps things fast and allows us to run multiple checks in parallel.
-- **Thresholds**: We don't want to spam the user if a site blips for a second. The system waits until a site has failed X times in a row before officially marking it as "down."
-- **Events**: I decoupled the notifications. When a status changes, an event fires. This way, if we want to add Slack or SMS alerts later, we just add a new listener.
+### 1. Asynchronous Queueing (Scalability)
+**Approach**: I used Laravel Queues to handle the actual HTTP checks.
+**Why**: If you have 1,000 sites to check every minute, a sequential loop will take too long and eventually fail. By using jobs, we can spin up multiple queue workers to process checks in parallel. It turns a bottleneck into a horizontally scalable system.
 
-## Security
+### 2. Service Layer Pattern (Maintainability)
+**Approach**: All monitoring logic is inside `MonitorService`.
+**Why**: Controllers should only handle requests and responses. By moving the logic to a service, we make the code testable in isolation and reusable. For example, we can trigger a check from a Web UI, an API, or a CLI command using the exact same code.
 
-I added a simple `X-API-KEY` middleware. It's not OAuth, but it's perfect for a private API like this.
-You can generate a key using:
-```bash
-php artisan app:generate-api-key
-```
-Then just drop it into your `.env` as `APP_API_KEY`.
+### 3. Event-Driven Notifications (Decoupling)
+**Approach**: Status changes fire a `MonitorStatusChanged` event.
+**Why**: Monitoring is the "hot path"—it needs to be fast. Sending an email is slow. By using events, we "fire and forget" the notification. If the mail server is slow or down, it doesn't block the next uptime check from starting.
 
-## API Endpoints
+---
 
-- `POST /api/monitors`: Register a site. Defaults to 5-min checks and 3-fail threshold.
-- `GET /api/monitors`: Current status of everything.
-- `GET /api/monitors/{id}/history`: Paginated check history.
-- `GET /api/monitors/{id}/stats`: Some extra metrics (latency, SSL expiry, etc).
+## 📡 API Reference & Testing
 
-## Setup
+All endpoints require the `X-API-KEY` header.
 
-1. `composer install`
-2. `cp .env.example .env` && `php artisan key:generate`
-3. Set up your MySQL credentials in `.env`.
-4. `php artisan migrate`
-5. `php artisan schedule:work` (to start the heartbeat)
-6. `php artisan queue:work` (to actually run the checks)
+### 1. Register a Monitor
+**POST** `/api/monitors`
+- **Body**:
+  ```json
+  {
+    "url": "https://example.com",
+    "check_interval": 5,
+    "threshold": 3
+  }
+  ```
+- **Success (201)**: Returns the new monitor object with `status: "pending"`.
+- **Error (422)**: If URL is missing, invalid, or already exists.
 
-## Testing
+### 2. List All Monitors
+**GET** `/api/monitors`
+- **Success (200)**:
+  ```json
+  {
+    "data": [
+      {
+        "id": 1,
+        "url": "https://example.com",
+        "status": "up",
+        "uptime_percentage": 99.5,
+        "last_checked_at": "2026-05-15T10:00:00.000000Z"
+      }
+    ]
+  }
+  ```
 
-I've covered the core logic and API endpoints with feature tests. You can run them with:
+### 3. Check History
+**GET** `/api/monitors/{id}/history`
+- **Query Params**: `page`, `per_page`
+- **Success (200)**: Returns a list of every check. If a check failed due to timeout, `status_code` will be `0` and `response_time_ms` will be `null`.
+- **Error (404)**: `{"message": "Monitor not found."}`
+
+---
+
+## 🧪 How to Test
+
+### Automated Tests
+I’ve written 15 functional tests covering security, threshold logic, and alerts.
 ```bash
 php artisan test
 ```
-Check `MonitorProductionTest.php` if you want to see how the threshold and notification logic is handled.
+
+### Manual Testing with cURL
+1. **Generate your key**: `php artisan app:generate-api-key`
+2. **Add to .env**: `APP_API_KEY=your_key`
+3. **Run the call**:
+   ```bash
+   curl -X POST http://localhost:8000/api/monitors \
+        -H "X-API-KEY: your_key" \
+        -H "Content-Type: application/json" \
+        -d '{"url": "https://google.com"}'
+   ```
+4. **Trigger Checks**:
+   Open two terminals:
+   - Term 1: `php artisan schedule:work` (dispatches checks)
+   - Term 2: `php artisan queue:work` (processes the checks)
